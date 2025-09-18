@@ -1,0 +1,25 @@
+import io
+import os
+from typing import Tuple
+import numpy as np
+from PIL import Image
+
+def load_image_bytes_to_array(image_bytes: bytes, img_size: int | None = None) -> np.ndarray:
+	"""Loads raw image bytes to a normalized numpy array of shape (1, H, W, C)."""
+	image_stream = io.BytesIO(image_bytes)
+	image = Image.open(image_stream).convert("RGB")
+	target_size = int(os.getenv("IMG_SIZE", img_size or 224))
+	image = image.resize((target_size, target_size))
+	image_array = np.array(image, dtype=np.float32) / 255.0
+	image_array = np.expand_dims(image_array, axis=0)
+	return image_array
+
+def softmax(x: np.ndarray) -> np.ndarray:
+	"""Numerically stable softmax for last axis."""
+	shifted = x - np.max(x, axis=-1, keepdims=True)
+	exp = np.exp(shifted)
+	return exp / np.sum(exp, axis=-1, keepdims=True)
+
+def topk_indices(probabilities: np.ndarray, k: int = 3) -> list[int]:
+	"""Returns top-k indices from a 1D probability array."""
+	return np.argsort(probabilities)[::-1][:k].tolist()
